@@ -18,6 +18,7 @@ import {
     ArrowRight
 } from 'lucide-react'
 import axios from 'axios'
+import API_URL from '../config/api'
 
 export default function Profile() {
     const { user, token } = useAuth()
@@ -28,7 +29,7 @@ export default function Profile() {
         const fetchStats = async () => {
             try {
                 const config = { headers: { Authorization: `Bearer ${token}` } }
-                const res = await axios.get('http://localhost:5000/api/profiles/stats', config)
+                const res = await axios.get(`${API_URL}/api/profiles/stats`, config)
                 setStats(res.data)
             } catch (err) {
                 console.error('Failed to fetch stats', err)

@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Leaf, Award, Map, Info, ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import axios from 'axios'
+import API_URL from '../config/api'
 
 interface Task {
     _id: string
@@ -22,7 +23,7 @@ export default function Tasks() {
     useEffect(() => {
         const fetchTasks = async () => {
             try {
-                const res = await axios.get('http://localhost:5000/api/tasks')
+                const res = await axios.get(`${API_URL}/api/tasks`)
                 setTasks(res.data)
             } catch (err) {
                 console.error('Failed to fetch tasks', err)
@@ -63,15 +64,15 @@ export default function Tasks() {
                             <Card key={task._id} className="group hover:-translate-y-2 transition-all duration-300 border-white/60 shadow-sm hover:shadow-xl overflow-hidden">
                                 <CardContent className="p-0">
                                     <div className={`h-3 bg-gradient-to-r ${task.category === 'Waste' ? 'from-orange-400 to-orange-600' :
-                                            task.category === 'Energy' ? 'from-amber-400 to-amber-600' :
-                                                task.category === 'Water' ? 'from-blue-400 to-blue-600' :
-                                                    'from-emerald-400 to-emerald-600'
+                                        task.category === 'Energy' ? 'from-amber-400 to-amber-600' :
+                                            task.category === 'Water' ? 'from-blue-400 to-blue-600' :
+                                                'from-emerald-400 to-emerald-600'
                                         }`}></div>
                                     <div className="p-6">
                                         <div className="flex justify-between items-center mb-4">
                                             <div className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest ${task.difficulty === 'Easy' ? 'bg-green-100 text-green-700' :
-                                                    task.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' :
-                                                        'bg-red-100 text-red-700'
+                                                task.difficulty === 'Medium' ? 'bg-amber-100 text-amber-700' :
+                                                    'bg-red-100 text-red-700'
                                                 }`}>
                                                 {task.difficulty}
                                             </div>

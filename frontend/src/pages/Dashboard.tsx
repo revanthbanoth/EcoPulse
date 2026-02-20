@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import axios from 'axios'
+import API_URL from '../config/api'
 
 interface Task {
     _id: string
@@ -44,9 +45,9 @@ export default function StudentDashboard() {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } }
             const [tasksRes, leadRes, statsRes] = await Promise.all([
-                axios.get('http://localhost:5000/api/tasks'),
-                axios.get('http://localhost:5000/api/profiles/leaderboard'),
-                axios.get('http://localhost:5000/api/profiles/stats', config)
+                axios.get(`${API_URL}/api/tasks`),
+                axios.get(`${API_URL}/api/profiles/leaderboard`),
+                axios.get(`${API_URL}/api/profiles/stats`, config)
             ])
             setTasks(tasksRes.data)
             setLeaderboard(leadRes.data)
@@ -81,7 +82,7 @@ export default function StudentDashboard() {
                     'Content-Type': 'multipart/form-data'
                 }
             }
-            await axios.post('http://localhost:5000/api/submissions', formData, config)
+            await axios.post(`${API_URL}/api/submissions`, formData, config)
             setShowSuccessPopup(true)
             setSelectedTask(null)
             setSubmissionForm({ content: '', proofUrl: '' })

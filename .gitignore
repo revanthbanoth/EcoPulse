@@ -8,11 +8,21 @@ dist/
 frontend/dist/
 build/
 
-# Environment variables
+# Environment variables - NEVER commit real .env files
 .env
+*.env
+.env.local
+.env.production
+.env.development
 backend/.env
 frontend/.env
-*.local
+frontend/.env.production
+frontend/.env.local
+
+# Keep example env files (safe to commit, no real secrets)
+!.env.example
+!backend/.env.example
+!frontend/.env.example
 
 # Tech-specific
 .vscode/

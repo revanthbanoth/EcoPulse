@@ -6,6 +6,7 @@ import { Trophy, Star, TrendingUp, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
+import API_URL from '../config/api'
 
 interface LeaderboardUser {
     _id: string
@@ -26,7 +27,7 @@ export default function Leaderboard() {
     useEffect(() => {
         const fetchLeaderboard = async () => {
             try {
-                const response = await axios.get('http://localhost:5000/api/profiles/leaderboard')
+                const response = await axios.get(`${API_URL}/api/profiles/leaderboard`)
                 setUsers(response.data)
             } catch (err) {
                 console.error('Failed to fetch leaderboard', err)

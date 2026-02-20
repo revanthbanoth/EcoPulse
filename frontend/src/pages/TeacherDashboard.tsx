@@ -17,6 +17,7 @@ import {
     ArrowRight
 } from 'lucide-react'
 import axios from 'axios'
+import API_URL from '../config/api'
 
 interface Task {
     _id: string
@@ -64,8 +65,8 @@ export default function TeacherDashboard() {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } }
             const [tasksRes, subsRes] = await Promise.all([
-                axios.get('http://localhost:5000/api/tasks'),
-                axios.get('http://localhost:5000/api/submissions', config)
+                axios.get(`${API_URL}/api/tasks`),
+                axios.get(`${API_URL}/api/submissions`, config)
             ])
             setTasks(tasksRes.data)
             setSubmissions(subsRes.data)
@@ -85,9 +86,9 @@ export default function TeacherDashboard() {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } }
             if (editingTask) {
-                await axios.put(`http://localhost:5000/api/tasks/${editingTask._id}`, newTask, config)
+                await axios.put(`${API_URL}/api/tasks/${editingTask._id}`, newTask, config)
             } else {
-                await axios.post('http://localhost:5000/api/tasks', newTask, config)
+                await axios.post(`${API_URL}/api/tasks`, newTask, config)
             }
             setShowTaskForm(false)
             setEditingTask(null)
@@ -102,7 +103,7 @@ export default function TeacherDashboard() {
         if (!confirm('Are you sure you want to delete this quest? All associated submissions will also be removed.')) return
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } }
-            await axios.delete(`http://localhost:5000/api/tasks/${id}`, config)
+            await axios.delete(`${API_URL}/api/tasks/${id}`, config)
             fetchDashboardData()
         } catch (err) {
             alert('Failed to delete task')
@@ -112,7 +113,7 @@ export default function TeacherDashboard() {
     const handleReview = async (id: string, status: 'approved' | 'rejected') => {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } }
-            await axios.patch(`http://localhost:5000/api/submissions/${id}`, {
+            await axios.patch(`${API_URL}/api/submissions/${id}`, {
                 status,
                 feedback: reviewFeedback[id] || ''
             }, config)

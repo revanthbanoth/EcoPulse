@@ -5,6 +5,7 @@ import { Button } from '../components/ui/Button'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/Card'
 import axios from 'axios'
 import { useAuth } from '../context/AuthContext'
+import API_URL from '../config/api'
 
 export default function Signup() {
     const [role, setRole] = useState<'student' | 'teacher'>('student')
@@ -21,7 +22,7 @@ export default function Signup() {
         setLoading(true)
         setError('')
         try {
-            const response = await axios.post('http://localhost:5000/api/auth/signup', {
+            const response = await axios.post(`${API_URL}/api/auth/signup`, {
                 fullName,
                 email,
                 password,
