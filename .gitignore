@@ -8,16 +8,14 @@ dist/
 frontend/dist/
 build/
 
-# Environment variables - NEVER commit real .env files
-.env
-*.env
-.env.local
-.env.production
-.env.development
+# Real secret env files - NEVER commit
 backend/.env
 frontend/.env
-frontend/.env.production
 frontend/.env.local
+.env.local
+
+# frontend/.env.production is SAFE to commit (only contains public API URL, no secrets)
+# backend/.env is secret (contains DB password, JWT, Cloudinary keys) - kept above
 
 # Keep example env files (safe to commit, no real secrets)
 !.env.example
