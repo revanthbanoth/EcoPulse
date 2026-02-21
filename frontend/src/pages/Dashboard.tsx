@@ -81,9 +81,7 @@ export default function StudentDashboard() {
             .filter(s => s.status === 'pending' || s.status === 'approved')
             .map(s => s.taskId?._id)
     )
-    const approvedTaskIds = new Set(
-        submissions.filter(s => s.status === 'approved').map(s => s.taskId?._id)
-    )
+
 
     const ongoingTasks = tasks.filter(t => !submittedTaskIds.has(t._id))
     const completedSubmissions = submissions.filter(
