@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const Submission = require('../models/Submission');
-const { auth } = require('../middleware/auth');
+const { auth, teacherAuth } = require('../middleware/auth');
 
 // Get Leaderboard
 router.get('/leaderboard', async (req, res) => {
@@ -35,6 +35,36 @@ router.get('/stats', auth, async (req, res) => {
             pendingTasks,
             recentActivity
         });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Teacher: Get all students
+router.get('/students', auth, teacherAuth, async (req, res) => {
+    try {
+        const students = await User.find({ role: 'student' })
+            .select('fullName email points level streak classId createdAt')
+            .sort({ points: -1 });
+
+        // Attach submission counts to each student
+        const studentData = await Promise.all(students.map(async (s) => {
+            const completed = await Submission.countDocuments({ studentId: s._id, status: 'approved' });
+            const pending = await Submission.countDocuments({ studentId: s._id, status: 'pending' });
+            return {
+                _id: s._id,
+                fullName: s.fullName,
+                email: s.email,
+                points: s.points,
+                level: s.level,
+                streak: s.streak,
+                classId: s.classId,
+                completedCount: completed,
+                pendingCount: pending,
+            };
+        }));
+
+        res.json(studentData);
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
