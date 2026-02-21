@@ -155,8 +155,8 @@ function QuestCard({ title, points, category, difficulty, image, icon: Icon }: {
     return (
         <Card className="group hover:-translate-y-2 transition-all duration-500 bg-[#0F172A] border-white/5 overflow-hidden shadow-2xl">
             <div className="h-48 overflow-hidden relative bg-[#010413]">
-                <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-60 group-hover:opacity-80 brightness-[0.7] contrast-[1.1] saturate-[0.9]" />
-                <div className="absolute inset-0 bg-gradient-to-t from-[#020617] via-transparent to-transparent opacity-60" />
+                <img src={image} alt={title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 opacity-90 group-hover:opacity-100" />
+                <div className="absolute inset-0 bg-gradient-to-t from-[#0F172A]/80 via-transparent to-transparent" />
                 <div className="absolute top-4 left-4 bg-primary/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest text-primary border border-primary/30 z-10">
                     {category}
                 </div>
