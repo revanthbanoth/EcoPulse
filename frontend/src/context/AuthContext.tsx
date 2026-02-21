@@ -11,6 +11,9 @@ interface User {
     level: number
     streak: number
     createdAt?: string
+    rollNumber?: string
+    section?: string
+    className?: string
 }
 
 interface AuthContextType {

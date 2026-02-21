@@ -12,6 +12,9 @@ export default function Signup() {
     const [fullName, setFullName] = useState('')
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [rollNumber, setRollNumber] = useState('')
+    const [section, setSection] = useState('')
+    const [className, setClassName] = useState('')
     const [error, setError] = useState('')
     const [loading, setLoading] = useState(false)
     const { login } = useAuth()
@@ -22,12 +25,13 @@ export default function Signup() {
         setLoading(true)
         setError('')
         try {
-            const response = await axios.post(`${API_URL}/api/auth/signup`, {
-                fullName,
-                email,
-                password,
-                role
-            })
+            const payload: any = { fullName, email, password, role }
+            if (role === 'student') {
+                payload.rollNumber = rollNumber
+                payload.section = section
+                payload.className = className
+            }
+            const response = await axios.post(`${API_URL}/api/auth/signup`, payload)
             login(response.data.token, response.data.user)
             navigate(response.data.user.role === 'teacher' ? '/teacher' : '/dashboard')
         } catch (err: any) {
@@ -55,14 +59,17 @@ export default function Signup() {
                     <CardDescription className="text-slate-400 font-medium">Join the mission to save our planet through action.</CardDescription>
                 </CardHeader>
                 <CardContent>
+                    {/* Role Toggle */}
                     <div className="flex p-1.5 bg-[#010413] rounded-2xl mb-8 border border-white/5">
                         <button
+                            type="button"
                             onClick={() => setRole('student')}
                             className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${role === 'student' ? 'bg-primary shadow-lg text-white' : 'text-slate-500 hover:text-slate-300'}`}
                         >
                             I'm a Student
                         </button>
                         <button
+                            type="button"
                             onClick={() => setRole('teacher')}
                             className={`flex-1 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${role === 'teacher' ? 'bg-primary shadow-lg text-white' : 'text-slate-500 hover:text-slate-300'}`}
                         >
@@ -78,6 +85,7 @@ export default function Signup() {
                     )}
 
                     <form className="space-y-5" onSubmit={handleSignup}>
+                        {/* Full Name */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Full Name</label>
                             <input
@@ -89,6 +97,8 @@ export default function Signup() {
                                 className="w-full px-5 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium"
                             />
                         </div>
+
+                        {/* Email */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Email Address</label>
                             <input
@@ -100,6 +110,49 @@ export default function Signup() {
                                 className="w-full px-5 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium"
                             />
                         </div>
+
+                        {/* Student-only fields */}
+                        {role === 'student' && (
+                            <>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Roll Number</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. 22CS101"
+                                            value={rollNumber}
+                                            onChange={(e) => setRollNumber(e.target.value)}
+                                            required
+                                            className="w-full px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium text-sm"
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Section</label>
+                                        <input
+                                            type="text"
+                                            placeholder="e.g. A"
+                                            value={section}
+                                            onChange={(e) => setSection(e.target.value)}
+                                            required
+                                            className="w-full px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium text-sm"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Class / Year</label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 2nd Year B.Tech CSE"
+                                        value={className}
+                                        onChange={(e) => setClassName(e.target.value)}
+                                        required
+                                        className="w-full px-5 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium"
+                                    />
+                                </div>
+                            </>
+                        )}
+
+                        {/* Password */}
                         <div className="space-y-2">
                             <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Password</label>
                             <input

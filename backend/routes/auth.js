@@ -4,28 +4,31 @@ const User = require('../models/User');
 const { auth } = require('../middleware/auth');
 const router = express.Router();
 
+const userPublicFields = (user) => ({
+    id: user._id,
+    fullName: user.fullName,
+    email: user.email,
+    role: user.role,
+    points: user.points,
+    level: user.level,
+    streak: user.streak,
+    rollNumber: user.rollNumber || '',
+    section: user.section || '',
+    className: user.className || '',
+    createdAt: user.createdAt,
+});
+
 router.post('/signup', async (req, res) => {
     try {
-        const { fullName, email, password, role } = req.body;
+        const { fullName, email, password, role, rollNumber, section, className } = req.body;
         const existingUser = await User.findOne({ email });
         if (existingUser) return res.status(400).json({ error: 'User already exists' });
 
-        const user = new User({ fullName, email, password, role });
+        const user = new User({ fullName, email, password, role, rollNumber, section, className });
         await user.save();
 
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.status(201).json({
-            token,
-            user: {
-                id: user._id,
-                fullName: user.fullName,
-                email: user.email,
-                role: user.role,
-                points: user.points,
-                level: user.level,
-                streak: user.streak
-            }
-        });
+        res.status(201).json({ token, user: userPublicFields(user) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -40,18 +43,7 @@ router.post('/login', async (req, res) => {
         }
 
         const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({
-            token,
-            user: {
-                id: user._id,
-                fullName: user.fullName,
-                email: user.email,
-                role: user.role,
-                points: user.points,
-                level: user.level,
-                streak: user.streak
-            }
-        });
+        res.json({ token, user: userPublicFields(user) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -62,17 +54,21 @@ router.get('/me', auth, async (req, res) => {
     try {
         const user = await User.findById(req.user.id).select('-password');
         if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json({
-            user: {
-                id: user._id,
-                fullName: user.fullName,
-                email: user.email,
-                role: user.role,
-                points: user.points,
-                level: user.level,
-                streak: user.streak
-            }
-        });
+        res.json({ user: userPublicFields(user) });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Update profile (rollNumber, section, className)
+router.patch('/me', auth, async (req, res) => {
+    try {
+        const allowed = ['rollNumber', 'section', 'className', 'fullName'];
+        const updates = {};
+        allowed.forEach(f => { if (req.body[f] !== undefined) updates[f] = req.body[f]; });
+
+        const user = await User.findByIdAndUpdate(req.user.id, updates, { new: true }).select('-password');
+        res.json({ user: userPublicFields(user) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

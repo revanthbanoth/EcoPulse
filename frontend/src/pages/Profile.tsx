@@ -15,7 +15,10 @@ import {
     Shield,
     Leaf,
     Clock,
-    ArrowRight
+    ArrowRight,
+    Hash,
+    BookOpen,
+    Layers
 } from 'lucide-react'
 import axios from 'axios'
 import API_URL from '../config/api'
@@ -93,6 +96,50 @@ export default function Profile() {
                                     </div>
                                     <span className="text-sm font-medium">Joined {new Date(user?.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}</span>
                                 </div>
+
+                                {/* Student-specific info */}
+                                {user?.role === 'student' && (
+                                    <>
+                                        <div className="pt-4 border-t border-white/5">
+                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 mb-4">Student Details</p>
+                                            <div className="space-y-4">
+                                                {user?.rollNumber && (
+                                                    <div className="flex items-center gap-4 text-slate-400 group">
+                                                        <div className="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
+                                                            <Hash size={18} className="text-emerald-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Roll Number</p>
+                                                            <p className="text-sm font-bold text-white">{user.rollNumber}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {user?.section && (
+                                                    <div className="flex items-center gap-4 text-slate-400 group">
+                                                        <div className="bg-blue-500/10 p-2 rounded-lg border border-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                                                            <Layers size={18} className="text-blue-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Section</p>
+                                                            <p className="text-sm font-bold text-white">{user.section}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {user?.className && (
+                                                    <div className="flex items-center gap-4 text-slate-400 group">
+                                                        <div className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
+                                                            <BookOpen size={18} className="text-amber-400" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Class / Year</p>
+                                                            <p className="text-sm font-bold text-white">{user.className}</p>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
                             </CardContent>
                         </Card>
                     </div>

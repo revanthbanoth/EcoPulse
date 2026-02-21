@@ -13,7 +13,9 @@ import {
     ArrowRight,
     TrendingUp,
     Leaf,
-    Upload
+    Upload,
+    Clock,
+    Lock
 } from 'lucide-react'
 import { motion } from 'framer-motion'
 import axios from 'axios'
@@ -29,9 +31,18 @@ interface Task {
     timelineDays: number
 }
 
+interface Submission {
+    _id: string
+    taskId: Task
+    status: 'pending' | 'approved' | 'rejected'
+    pointsAwarded?: number
+    createdAt: string
+}
+
 export default function StudentDashboard() {
     const { user, token } = useAuth()
     const [tasks, setTasks] = useState<Task[]>([])
+    const [submissions, setSubmissions] = useState<Submission[]>([])
     const [leaderboard, setLeaderboard] = useState<any[]>([])
     const [stats, setStats] = useState<any>(null)
     const [loading, setLoading] = useState(true)
@@ -40,18 +51,21 @@ export default function StudentDashboard() {
     const [file, setFile] = useState<File | null>(null)
     const [submitting, setSubmitting] = useState(false)
     const [showSuccessPopup, setShowSuccessPopup] = useState(false)
+    const [activeTab, setActiveTab] = useState<'ongoing' | 'completed'>('ongoing')
 
     const fetchData = async () => {
         try {
             const config = { headers: { Authorization: `Bearer ${token}` } }
-            const [tasksRes, leadRes, statsRes] = await Promise.all([
+            const [tasksRes, leadRes, statsRes, subsRes] = await Promise.all([
                 axios.get(`${API_URL}/api/tasks`),
                 axios.get(`${API_URL}/api/profiles/leaderboard`),
-                axios.get(`${API_URL}/api/profiles/stats`, config)
+                axios.get(`${API_URL}/api/profiles/stats`, config),
+                axios.get(`${API_URL}/api/submissions/my`, config),
             ])
             setTasks(tasksRes.data)
             setLeaderboard(leadRes.data)
             setStats(statsRes.data)
+            setSubmissions(subsRes.data)
         } catch (err) {
             console.error('Failed to fetch dashboard data', err)
         } finally {
@@ -59,13 +73,27 @@ export default function StudentDashboard() {
         }
     }
 
-    useEffect(() => {
-        fetchData()
-    }, [token])
+    useEffect(() => { fetchData() }, [token])
+
+    // Derived state: which tasks have been submitted (pending or approved)
+    const submittedTaskIds = new Set(
+        submissions
+            .filter(s => s.status === 'pending' || s.status === 'approved')
+            .map(s => s.taskId?._id)
+    )
+    const approvedTaskIds = new Set(
+        submissions.filter(s => s.status === 'approved').map(s => s.taskId?._id)
+    )
+
+    const ongoingTasks = tasks.filter(t => !submittedTaskIds.has(t._id))
+    const completedSubmissions = submissions.filter(
+        s => s.status === 'approved' || s.status === 'pending'
+    )
 
     const handleSubmitQuest = async (e: React.FormEvent) => {
         e.preventDefault()
         if (!selectedTask) return
+        setSubmitting(true)
         const formData = new FormData()
         formData.append('taskId', selectedTask._id)
         formData.append('content', submissionForm.content)
@@ -94,6 +122,83 @@ export default function StudentDashboard() {
             setSubmitting(false)
         }
     }
+
+    const categoryColors: Record<string, string> = {
+        Waste: 'bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-orange-500/10',
+        Energy: 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10',
+        Water: 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-blue-500/10',
+        Biodiversity: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10',
+    }
+    const difficultyColors: Record<string, string> = {
+        Easy: 'bg-emerald-500/10 text-emerald-400',
+        Medium: 'bg-amber-500/10 text-amber-400',
+        Hard: 'bg-red-500/10 text-red-400',
+    }
+
+    const TaskCard = ({ task, isCompleted, isPending }: { task: Task; isCompleted?: boolean; isPending?: boolean }) => (
+        <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+        >
+            <Card className={`group transition-all cursor-default bg-[#0F172A] border-white/5 overflow-hidden ${isCompleted ? 'opacity-75' : 'hover:border-primary/30'}`}>
+                <CardContent className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                    <div className="flex gap-5">
+                        <div className={`p-5 rounded-2xl border transition-all duration-500 ${!isCompleted && !isPending ? 'group-hover:scale-110' : ''} shadow-lg ${categoryColors[task.category] || categoryColors.Biodiversity}`}>
+                            <Leaf className="w-8 h-8" />
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg ${difficultyColors[task.difficulty]}`}>
+                                    {task.difficulty}
+                                </span>
+                                <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 text-slate-500 px-2 py-1 rounded-lg border border-white/5">
+                                    {task.category}
+                                </span>
+                                {isPending && (
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-amber-500/10 text-amber-400 px-2 py-1 rounded-lg border border-amber-500/20">
+                                        Under Review
+                                    </span>
+                                )}
+                                {isCompleted && !isPending && (
+                                    <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-primary/10 text-primary px-2 py-1 rounded-lg border border-primary/20">
+                                        ✓ Approved
+                                    </span>
+                                )}
+                            </div>
+                            <h3 className="text-xl font-bold text-white tracking-tight leading-tight">{task.title}</h3>
+                            <p className="text-sm text-slate-500 font-medium line-clamp-1 mt-1">{task.description}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-8 w-full md:w-auto justify-between border-t border-white/5 md:border-t-0 pt-5 md:pt-0">
+                        <div className="flex flex-col items-end">
+                            <span className={`text-2xl font-black tracking-tighter ${isCompleted && !isPending ? 'text-primary' : isPending ? 'text-amber-400' : 'text-primary'}`}>
+                                {isCompleted && !isPending ? '+' : ''}{task.pointsBase}
+                            </span>
+                            <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Points</span>
+                        </div>
+                        {isCompleted || isPending ? (
+                            <div className={`flex items-center gap-2 px-6 py-3 rounded-2xl border text-xs font-black uppercase tracking-widest ${isPending
+                                ? 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                : 'bg-primary/10 text-primary border-primary/20'
+                                }`}>
+                                {isPending ? <Clock size={14} /> : <CheckCircle2 size={14} />}
+                                {isPending ? 'Submitted' : 'Completed'}
+                            </div>
+                        ) : (
+                            <Button
+                                onClick={() => setSelectedTask(task)}
+                                size="lg"
+                                className="rounded-2xl px-8 bg-primary hover:bg-emerald-600 border-0 shadow-xl shadow-primary/20 text-white font-black uppercase tracking-widest text-xs"
+                            >
+                                Start <ArrowRight size={14} className="ml-2" />
+                            </Button>
+                        )}
+                    </div>
+                </CardContent>
+            </Card>
+        </motion.div>
+    )
 
     return (
         <div className="min-h-screen bg-[#020617] text-slate-100 selection:bg-primary/30">
@@ -140,69 +245,102 @@ export default function StudentDashboard() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 relative z-10">
-                    {/* Main Content: Active Quests */}
+                    {/* Main Content */}
                     <div className="lg:col-span-2 space-y-8">
-                        <section>
-                            <div className="flex justify-between items-end mb-8">
-                                <h2 className="text-2xl font-black font-heading text-white flex items-center gap-2 tracking-tight">
-                                    <Target className="text-primary" />
-                                    Active Eco-Quests
-                                </h2>
-                                <Button variant="ghost" className="text-slate-500 hover:text-white font-bold text-xs uppercase tracking-widest">History</Button>
-                            </div>
+                        {/* Tab Switcher */}
+                        <div className="flex gap-2 p-1.5 bg-[#0F172A] rounded-2xl border border-white/5 w-fit">
+                            <button
+                                onClick={() => setActiveTab('ongoing')}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'ongoing'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                    : 'text-slate-500 hover:text-slate-300'
+                                    }`}
+                            >
+                                <Target size={14} />
+                                Ongoing
+                                <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'ongoing' ? 'bg-white/20' : 'bg-white/5'}`}>
+                                    {ongoingTasks.length}
+                                </span>
+                            </button>
+                            <button
+                                onClick={() => setActiveTab('completed')}
+                                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'completed'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/20'
+                                    : 'text-slate-500 hover:text-slate-300'
+                                    }`}
+                            >
+                                <CheckCircle2 size={14} />
+                                Completed
+                                <span className={`px-1.5 py-0.5 rounded-md text-[9px] ${activeTab === 'completed' ? 'bg-white/20' : 'bg-white/5'}`}>
+                                    {completedSubmissions.length}
+                                </span>
+                            </button>
+                        </div>
 
-                            <div className="grid grid-cols-1 gap-5">
-                                {loading ? (
-                                    Array(3).fill(0).map((_, i) => (
-                                        <div key={i} className="h-32 bg-white/5 animate-pulse rounded-3xl border border-white/5" />
-                                    ))
-                                ) : tasks.length > 0 ? (
-                                    tasks.map((task) => (
-                                        <Card key={task._id} className="group hover:border-primary/30 transition-all cursor-default bg-[#0F172A] border-white/5 overflow-hidden">
-                                            <CardContent className="p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                                                <div className="flex gap-5">
-                                                    <div className={`p-5 rounded-2xl border transition-all duration-500 group-hover:scale-110 shadow-lg ${task.category === 'Waste' ? 'bg-orange-500/10 text-orange-400 border-orange-500/20 shadow-orange-500/10' :
-                                                        task.category === 'Energy' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20 shadow-amber-500/10' :
-                                                            task.category === 'Water' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20 shadow-blue-500/10' :
-                                                                'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 shadow-emerald-500/10'
-                                                        }`}>
-                                                        <Leaf className="w-8 h-8" />
-                                                    </div>
-                                                    <div>
-                                                        <div className="flex items-center gap-2 mb-2">
-                                                            <span className={`text-[9px] font-black uppercase tracking-[0.2em] px-2 py-1 rounded-lg border-current border-opacity-20 ${task.difficulty === 'Easy' ? 'bg-emerald-500/10 text-emerald-400' :
-                                                                task.difficulty === 'Medium' ? 'bg-amber-500/10 text-amber-400' :
-                                                                    'bg-red-500/10 text-red-400'
-                                                                }`}>
-                                                                {task.difficulty}
-                                                            </span>
-                                                            <span className="text-[9px] font-black uppercase tracking-[0.2em] bg-white/5 text-slate-500 px-2 py-1 rounded-lg border border-white/5">
-                                                                {task.category}
-                                                            </span>
-                                                        </div>
-                                                        <h3 className="text-xl font-bold text-white group-hover:text-primary transition-colors tracking-tight leading-tight">{task.title}</h3>
-                                                        <p className="text-sm text-slate-500 font-medium line-clamp-1 mt-1">{task.description}</p>
-                                                    </div>
+                        {/* Ongoing Quests */}
+                        {activeTab === 'ongoing' && (
+                            <section>
+                                <h2 className="text-2xl font-black font-heading text-white flex items-center gap-2 tracking-tight mb-6">
+                                    <Target className="text-primary" /> Active Eco-Quests
+                                </h2>
+                                <div className="grid grid-cols-1 gap-5">
+                                    {loading ? (
+                                        Array(3).fill(0).map((_, i) => (
+                                            <div key={i} className="h-32 bg-white/5 animate-pulse rounded-3xl border border-white/5" />
+                                        ))
+                                    ) : ongoingTasks.length > 0 ? (
+                                        ongoingTasks.map(task => (
+                                            <TaskCard key={task._id} task={task} />
+                                        ))
+                                    ) : (
+                                        <Card className="p-20 text-center border-dashed border-2 border-white/5 bg-[#0F172A] rounded-[3rem]">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center border border-primary/20">
+                                                    <CheckCircle2 className="text-primary w-8 h-8" />
                                                 </div>
-                                                <div className="flex items-center gap-8 w-full md:w-auto justify-between border-t border-white/5 md:border-t-0 pt-5 md:pt-0">
-                                                    <div className="flex flex-col items-end">
-                                                        <span className="text-2xl font-black text-primary tracking-tighter">+{task.pointsBase}</span>
-                                                        <span className="text-[9px] font-black text-slate-600 uppercase tracking-widest">Points</span>
-                                                    </div>
-                                                    <Button onClick={() => setSelectedTask(task)} size="lg" className="rounded-2xl px-8 bg-primary hover:bg-emerald-600 border-0 shadow-xl shadow-primary/20 text-white font-black uppercase tracking-widest text-xs">
-                                                        Start <ArrowRight size={14} className="ml-2" />
-                                                    </Button>
-                                                </div>
-                                            </CardContent>
+                                                <p className="text-slate-500 font-black uppercase tracking-[0.3em] text-sm">All quests completed!</p>
+                                                <p className="text-slate-700 text-xs font-medium">Check back later for new tasks.</p>
+                                            </div>
                                         </Card>
-                                    ))
-                                ) : (
-                                    <Card className="p-20 text-center border-dashed border-2 border-white/5 bg-[#0F172A] rounded-[3rem]">
-                                        <p className="text-slate-600 font-black uppercase tracking-[0.4em]">No active quests</p>
-                                    </Card>
-                                )}
-                            </div>
-                        </section>
+                                    )}
+                                </div>
+                            </section>
+                        )}
+
+                        {/* Completed Quests */}
+                        {activeTab === 'completed' && (
+                            <section>
+                                <h2 className="text-2xl font-black font-heading text-white flex items-center gap-2 tracking-tight mb-6">
+                                    <CheckCircle2 className="text-primary" /> Completed Quests
+                                </h2>
+                                <div className="grid grid-cols-1 gap-5">
+                                    {loading ? (
+                                        Array(2).fill(0).map((_, i) => (
+                                            <div key={i} className="h-32 bg-white/5 animate-pulse rounded-3xl border border-white/5" />
+                                        ))
+                                    ) : completedSubmissions.length > 0 ? (
+                                        completedSubmissions.map(sub => sub.taskId && (
+                                            <TaskCard
+                                                key={sub._id}
+                                                task={sub.taskId}
+                                                isCompleted={sub.status === 'approved'}
+                                                isPending={sub.status === 'pending'}
+                                            />
+                                        ))
+                                    ) : (
+                                        <Card className="p-20 text-center border-dashed border-2 border-white/5 bg-[#0F172A] rounded-[3rem]">
+                                            <div className="flex flex-col items-center gap-4">
+                                                <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center border border-white/5">
+                                                    <Lock className="text-slate-600 w-8 h-8" />
+                                                </div>
+                                                <p className="text-slate-600 font-black uppercase tracking-[0.3em] text-sm">No completed quests yet</p>
+                                                <p className="text-slate-700 text-xs font-medium">Start a quest to see your progress here.</p>
+                                            </div>
+                                        </Card>
+                                    )}
+                                </div>
+                            </section>
+                        )}
                     </div>
 
                     {/* Sidebar: Progress & Leaderboard */}
@@ -210,8 +348,7 @@ export default function StudentDashboard() {
                         <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem] overflow-hidden">
                             <CardHeader className="pb-2">
                                 <CardTitle className="flex items-center gap-2 text-xl font-black tracking-tight text-white">
-                                    <TrendingUp className="text-secondary" />
-                                    Your Progress
+                                    <TrendingUp className="text-secondary" /> Your Progress
                                 </CardTitle>
                                 <CardDescription className="text-slate-500 font-medium">Monthly impact stats</CardDescription>
                             </CardHeader>
@@ -234,7 +371,6 @@ export default function StudentDashboard() {
                                         <div className="h-full bg-gradient-to-r from-secondary to-blue-400 rounded-full shadow-lg shadow-secondary/20" style={{ width: `${Math.min(((stats?.pendingTasks || 0) / 5) * 100, 100)}%` }} />
                                     </div>
                                 </div>
-
                                 <div className="pt-6 border-t border-white/5">
                                     <div className="bg-primary/5 p-5 rounded-2xl flex items-start gap-4 border border-primary/10">
                                         <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
@@ -316,16 +452,11 @@ export default function StudentDashboard() {
                                         <label className="flex-1 flex items-center justify-center gap-3 px-6 py-4 border-2 border-dashed border-white/5 rounded-2xl hover:border-primary/50 cursor-pointer transition-all text-slate-500 hover:text-primary bg-[#010413] group">
                                             <Upload size={20} className="group-hover:scale-110 transition-transform" />
                                             <span className="text-sm font-black uppercase tracking-widest">{file ? file.name : 'Select Proof Image'}</span>
-                                            <input
-                                                type="file"
-                                                className="hidden"
-                                                accept="image/*"
-                                                onChange={e => setFile(e.target.files?.[0] || null)}
-                                            />
+                                            <input type="file" className="hidden" accept="image/*" onChange={e => setFile(e.target.files?.[0] || null)} />
                                         </label>
                                     </div>
                                     <div className="relative py-2">
-                                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5"></div></div>
+                                        <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/5" /></div>
                                         <div className="relative flex justify-center text-[8px] font-black uppercase tracking-[0.4em]"><span className="bg-[#020617] px-4 text-slate-600">or link</span></div>
                                     </div>
                                     <input

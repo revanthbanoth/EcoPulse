@@ -11,6 +11,10 @@ const userSchema = new mongoose.Schema({
     level: { type: Number, default: 1 },
     streak: { type: Number, default: 0 },
     classId: { type: String },
+    // Student-specific fields
+    rollNumber: { type: String, default: '' },
+    section: { type: String, default: '' },
+    className: { type: String, default: '' },
 }, { timestamps: true });
 
 userSchema.pre('save', async function () {
