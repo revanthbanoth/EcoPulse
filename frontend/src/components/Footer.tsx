@@ -38,7 +38,7 @@ export default function Footer({ minimal = false }: FooterProps) {
                             © 2026 EcoPulse Platform
                         </p>
                         <p className="text-[9px] font-black uppercase tracking-[0.3em] text-slate-600 whitespace-nowrap">
-                            Developed by <span className="text-white tracking-normal">B <span className="text-primary italic text-[11px]">Revanth</span></span>
+                            Developed by <span className="text-white tracking-normal">Y <span className="text-primary italic text-[11px]">Bhavya</span></span>
                         </p>
                     </div>
                 </div>
