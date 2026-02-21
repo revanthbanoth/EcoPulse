@@ -63,7 +63,7 @@ app.use(express.static(frontendBuildPath));
 
 // Catch-all: for any route that is NOT an API route, return index.html
 // This lets React Router handle client-side navigation (fixes 404 on refresh)
-app.get('(.*)', (req, res) => {
+app.get(/\/.*/, (req, res) => {
     res.sendFile(path.join(frontendBuildPath, 'index.html'));
 });
 // ─────────────────────────────────────────────────────────────────────────────
