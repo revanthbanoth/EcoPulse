@@ -17,7 +17,7 @@ router.get('/leaderboard', async (req, res) => {
     }
 });
 
-// Get User Stats (e.g., for dashboard)
+// Get User Stats (student)
 router.get('/stats', auth, async (req, res) => {
     try {
         const userId = req.user.id;
@@ -30,15 +30,34 @@ router.get('/stats', auth, async (req, res) => {
             .sort({ updatedAt: -1 })
             .limit(5);
 
-        res.json({
-            totalCompleted,
-            pendingTasks,
-            recentActivity
-        });
+        res.json({ totalCompleted, pendingTasks, recentActivity });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
+// Get Teacher Stats
+router.get('/teacher-stats', auth, async (req, res) => {
+    try {
+        const Task = require('../models/Task');
+        const totalStudents = await User.countDocuments({ role: 'student' });
+        const totalTasks = await Task.countDocuments();
+        const pendingReviews = await Submission.countDocuments({ status: 'pending' });
+        const approvedTotal = await Submission.countDocuments({ status: 'approved' });
+
+        // Recent submissions to review
+        const recentSubmissions = await Submission.find({ status: 'pending' })
+            .populate('taskId', 'title')
+            .populate('studentId', 'fullName')
+            .sort({ createdAt: -1 })
+            .limit(5);
+
+        res.json({ totalStudents, totalTasks, pendingReviews, approvedTotal, recentSubmissions });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 
 // Teacher: Get all students
 router.get('/students', auth, teacherAuth, async (req, res) => {

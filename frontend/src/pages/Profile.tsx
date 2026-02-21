@@ -18,21 +18,38 @@ import {
     ArrowRight,
     Hash,
     BookOpen,
-    Layers
+    Layers,
+    Users,
+    CheckSquare,
+    ClipboardList,
+    X,
+    Save
 } from 'lucide-react'
 import axios from 'axios'
 import API_URL from '../config/api'
 
 export default function Profile() {
-    const { user, token } = useAuth()
+    const { user, token, login } = useAuth()
     const [stats, setStats] = useState<any>(null)
     const [loading, setLoading] = useState(true)
+    const [showEditModal, setShowEditModal] = useState(false)
+
+    // Edit form state
+    const [editName, setEditName] = useState(user?.fullName || '')
+    const [editRoll, setEditRoll] = useState(user?.rollNumber || '')
+    const [editSection, setEditSection] = useState(user?.section || '')
+    const [editClass, setEditClass] = useState(user?.className || '')
+    const [saving, setSaving] = useState(false)
+    const [saveError, setSaveError] = useState('')
 
     useEffect(() => {
         const fetchStats = async () => {
             try {
                 const config = { headers: { Authorization: `Bearer ${token}` } }
-                const res = await axios.get(`${API_URL}/api/profiles/stats`, config)
+                const endpoint = user?.role === 'teacher'
+                    ? `${API_URL}/api/profiles/teacher-stats`
+                    : `${API_URL}/api/profiles/stats`
+                const res = await axios.get(endpoint, config)
                 setStats(res.data)
             } catch (err) {
                 console.error('Failed to fetch stats', err)
@@ -41,7 +58,41 @@ export default function Profile() {
             }
         }
         if (token) fetchStats()
-    }, [token])
+    }, [token, user?.role])
+
+    const openEdit = () => {
+        setEditName(user?.fullName || '')
+        setEditRoll(user?.rollNumber || '')
+        setEditSection(user?.section || '')
+        setEditClass(user?.className || '')
+        setSaveError('')
+        setShowEditModal(true)
+    }
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaving(true)
+        setSaveError('')
+        try {
+            const config = { headers: { Authorization: `Bearer ${token}` } }
+            const body: any = { fullName: editName }
+            if (user?.role === 'student') {
+                body.rollNumber = editRoll
+                body.section = editSection
+                body.className = editClass
+            }
+            const res = await axios.patch(`${API_URL}/api/auth/me`, body, config)
+            // Update localStorage + context
+            const updated = res.data.user
+            const storedToken = localStorage.getItem('token') || token || ''
+            login(storedToken, updated)
+            setShowEditModal(false)
+        } catch (err: any) {
+            setSaveError(err.response?.data?.error || 'Failed to save changes')
+        } finally {
+            setSaving(false)
+        }
+    }
 
     return (
         <div className="min-h-screen bg-[#020617] text-slate-100 selection:bg-primary/30">
@@ -68,9 +119,14 @@ export default function Profile() {
                                 </div>
                                 <h2 className="text-2xl font-black text-white tracking-tight leading-tight">{user?.fullName}</h2>
                                 <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mt-1 mb-6">
-                                    {user?.role} • Level {user?.level}
+                                    {user?.role}{user?.role === 'student' ? ` • Level ${user?.level}` : ''}
                                 </p>
-                                <Button variant="outline" size="sm" className="w-full rounded-2xl gap-2 border-white/5 bg-white/5 hover:bg-white/10 text-xs font-black uppercase tracking-widest h-11">
+                                <Button
+                                    onClick={openEdit}
+                                    variant="outline"
+                                    size="sm"
+                                    className="w-full rounded-2xl gap-2 border-white/5 bg-white/5 hover:bg-primary/10 hover:border-primary/30 hover:text-primary text-xs font-black uppercase tracking-widest h-11 transition-all"
+                                >
                                     <Settings size={14} /> Edit Profile
                                 </Button>
                             </CardContent>
@@ -99,46 +155,44 @@ export default function Profile() {
 
                                 {/* Student-specific info */}
                                 {user?.role === 'student' && (
-                                    <>
-                                        <div className="pt-4 border-t border-white/5">
-                                            <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 mb-4">Student Details</p>
-                                            <div className="space-y-4">
-                                                {user?.rollNumber && (
-                                                    <div className="flex items-center gap-4 text-slate-400 group">
-                                                        <div className="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
-                                                            <Hash size={18} className="text-emerald-400" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Roll Number</p>
-                                                            <p className="text-sm font-bold text-white">{user.rollNumber}</p>
-                                                        </div>
+                                    <div className="pt-4 border-t border-white/5">
+                                        <p className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-600 mb-4">Student Details</p>
+                                        <div className="space-y-4">
+                                            {user?.rollNumber && (
+                                                <div className="flex items-center gap-4 text-slate-400 group">
+                                                    <div className="bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/10 group-hover:bg-emerald-500/20 transition-colors">
+                                                        <Hash size={18} className="text-emerald-400" />
                                                     </div>
-                                                )}
-                                                {user?.section && (
-                                                    <div className="flex items-center gap-4 text-slate-400 group">
-                                                        <div className="bg-blue-500/10 p-2 rounded-lg border border-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
-                                                            <Layers size={18} className="text-blue-400" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Section</p>
-                                                            <p className="text-sm font-bold text-white">{user.section}</p>
-                                                        </div>
+                                                    <div>
+                                                        <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Roll Number</p>
+                                                        <p className="text-sm font-bold text-white">{user.rollNumber}</p>
                                                     </div>
-                                                )}
-                                                {user?.className && (
-                                                    <div className="flex items-center gap-4 text-slate-400 group">
-                                                        <div className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
-                                                            <BookOpen size={18} className="text-amber-400" />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Class / Year</p>
-                                                            <p className="text-sm font-bold text-white">{user.className}</p>
-                                                        </div>
+                                                </div>
+                                            )}
+                                            {user?.section && (
+                                                <div className="flex items-center gap-4 text-slate-400 group">
+                                                    <div className="bg-blue-500/10 p-2 rounded-lg border border-blue-500/10 group-hover:bg-blue-500/20 transition-colors">
+                                                        <Layers size={18} className="text-blue-400" />
                                                     </div>
-                                                )}
-                                            </div>
+                                                    <div>
+                                                        <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Section</p>
+                                                        <p className="text-sm font-bold text-white">{user.section}</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {user?.className && (
+                                                <div className="flex items-center gap-4 text-slate-400 group">
+                                                    <div className="bg-amber-500/10 p-2 rounded-lg border border-amber-500/10 group-hover:bg-amber-500/20 transition-colors">
+                                                        <BookOpen size={18} className="text-amber-400" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-[9px] text-slate-600 font-black uppercase tracking-widest">Class / Year</p>
+                                                        <p className="text-sm font-bold text-white">{user.className}</p>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                    </>
+                                    </div>
                                 )}
                             </CardContent>
                         </Card>
@@ -148,71 +202,149 @@ export default function Profile() {
                     <div className="md:col-span-2 space-y-8">
                         <div>
                             <h3 className="text-2xl font-black text-white mb-8 flex items-center gap-3 tracking-tight">
-                                <div className="bg-amber-500/20 p-2 rounded-xl border border-amber-500/20">
-                                    <Trophy className="text-amber-500 w-5 h-5 shadow-lg shadow-amber-500/20" />
+                                <div className={`p-2 rounded-xl border ${user?.role === 'teacher' ? 'bg-blue-500/20 border-blue-500/20' : 'bg-amber-500/20 border-amber-500/20'}`}>
+                                    <Trophy className={`w-5 h-5 ${user?.role === 'teacher' ? 'text-blue-400' : 'text-amber-500'}`} />
                                 </div>
-                                Impact Overview
+                                {user?.role === 'teacher' ? 'Teaching Overview' : 'Impact Overview'}
                             </h3>
-                            <div className="grid grid-cols-2 gap-6">
-                                <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
-                                    <CardContent className="p-8">
-                                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Total Points</p>
-                                        <p className="text-4xl font-black text-white tracking-tighter">{user?.points}</p>
-                                        <div className="mt-4 inline-flex items-center gap-1.5 text-[9px] text-primary font-black uppercase tracking-widest bg-primary/10 px-2 py-1 rounded-lg border border-primary/10">
-                                            <Leaf size={10} className="fill-current" /> Top 15% rank
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                                <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
-                                    <CardContent className="p-8">
-                                        <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Current Streak</p>
-                                        <div className="flex items-center gap-3">
-                                            <p className="text-4xl font-black text-amber-500 tracking-tighter">{user?.streak}</p>
-                                            <div className="bg-amber-500/20 p-1.5 rounded-lg border border-amber-500/20">
-                                                <Flame className="text-amber-500 w-5 h-5 shadow-lg shadow-amber-500/40" />
+
+                            {/* Teacher stats */}
+                            {user?.role === 'teacher' ? (
+                                <div className="grid grid-cols-2 gap-6">
+                                    <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
+                                        <CardContent className="p-8">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Total Students</p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-4xl font-black text-white tracking-tighter">{loading ? '...' : stats?.totalStudents ?? 0}</p>
+                                                <div className="bg-blue-500/20 p-1.5 rounded-lg border border-blue-500/20">
+                                                    <Users className="text-blue-400 w-5 h-5" />
+                                                </div>
                                             </div>
-                                        </div>
-                                        <p className="mt-4 text-[9px] text-slate-600 font-black uppercase tracking-widest">Days Active</p>
-                                    </CardContent>
-                                </Card>
-                            </div>
+                                            <p className="mt-4 text-[9px] text-slate-600 font-black uppercase tracking-widest">Enrolled</p>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
+                                        <CardContent className="p-8">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Tasks Created</p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-4xl font-black text-white tracking-tighter">{loading ? '...' : stats?.totalTasks ?? 0}</p>
+                                                <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
+                                                    <ClipboardList className="text-primary w-5 h-5" />
+                                                </div>
+                                            </div>
+                                            <p className="mt-4 text-[9px] text-slate-600 font-black uppercase tracking-widest">Eco-Quests</p>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
+                                        <CardContent className="p-8">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Pending Reviews</p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-4xl font-black text-amber-400 tracking-tighter">{loading ? '...' : stats?.pendingReviews ?? 0}</p>
+                                                <div className="bg-amber-500/20 p-1.5 rounded-lg border border-amber-500/20">
+                                                    <Clock className="text-amber-400 w-5 h-5" />
+                                                </div>
+                                            </div>
+                                            <p className="mt-4 text-[9px] text-slate-600 font-black uppercase tracking-widest">Awaiting Approval</p>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
+                                        <CardContent className="p-8">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Approved Total</p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-4xl font-black text-primary tracking-tighter">{loading ? '...' : stats?.approvedTotal ?? 0}</p>
+                                                <div className="bg-primary/20 p-1.5 rounded-lg border border-primary/20">
+                                                    <CheckSquare className="text-primary w-5 h-5" />
+                                                </div>
+                                            </div>
+                                            <p className="mt-4 text-[9px] text-slate-600 font-black uppercase tracking-widest">Submissions Approved</p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            ) : (
+                                // Student stats
+                                <div className="grid grid-cols-2 gap-6">
+                                    <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
+                                        <CardContent className="p-8">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Total Points</p>
+                                            <p className="text-4xl font-black text-white tracking-tighter">{user?.points}</p>
+                                            <div className="mt-4 inline-flex items-center gap-1.5 text-[9px] text-primary font-black uppercase tracking-widest bg-primary/10 px-2 py-1 rounded-lg border border-primary/10">
+                                                <Leaf size={10} className="fill-current" /> Top 15% rank
+                                            </div>
+                                        </CardContent>
+                                    </Card>
+                                    <Card className="border-white/5 bg-[#0F172A] shadow-xl rounded-[2.5rem]">
+                                        <CardContent className="p-8">
+                                            <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest mb-2">Current Streak</p>
+                                            <div className="flex items-center gap-3">
+                                                <p className="text-4xl font-black text-amber-500 tracking-tighter">{user?.streak}</p>
+                                                <div className="bg-amber-500/20 p-1.5 rounded-lg border border-amber-500/20">
+                                                    <Flame className="text-amber-500 w-5 h-5" />
+                                                </div>
+                                            </div>
+                                            <p className="mt-4 text-[9px] text-slate-600 font-black uppercase tracking-widest">Days Active</p>
+                                        </CardContent>
+                                    </Card>
+                                </div>
+                            )}
                         </div>
 
+                        {/* Recent Activity */}
                         <Card className="border-white/5 bg-[#0F172A] shadow-2xl rounded-[3rem] overflow-hidden">
                             <CardHeader className="p-8 pb-4">
                                 <CardTitle className="flex items-center gap-3 text-xl font-black tracking-tight text-white">
                                     <div className="bg-secondary/20 p-2 rounded-xl">
                                         <Clock className="text-secondary w-5 h-5" />
                                     </div>
-                                    Recent Activity
+                                    {user?.role === 'teacher' ? 'Recent Submissions to Review' : 'Recent Activity'}
                                 </CardTitle>
-                                <CardDescription className="text-slate-500 font-medium">Your latest environmental contributions</CardDescription>
+                                <CardDescription className="text-slate-500 font-medium">
+                                    {user?.role === 'teacher' ? 'Latest student submissions awaiting your review' : 'Your latest environmental contributions'}
+                                </CardDescription>
                             </CardHeader>
                             <CardContent className="p-0">
                                 {loading ? (
-                                    <div className="p-16 text-center animate-pulse text-[10px] font-black uppercase tracking-[0.4em] text-slate-800">Calculating impact...</div>
-                                ) : stats?.recentActivity && stats.recentActivity.length > 0 ? (
-                                    stats.recentActivity.map((act: any) => (
-                                        <div key={act._id} className="p-6 border-b border-white/5 last:border-0 flex justify-between items-center group hover:bg-white/5 transition-all">
-                                            <div className="flex items-center gap-5">
-                                                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 group-hover:rotate-12 transition-all shadow-lg shadow-primary/5">
-                                                    <Leaf size={22} className="fill-current" />
+                                    <div className="p-16 text-center animate-pulse text-[10px] font-black uppercase tracking-[0.4em] text-slate-800">Loading...</div>
+                                ) : user?.role === 'teacher' ? (
+                                    stats?.recentSubmissions && stats.recentSubmissions.length > 0 ? (
+                                        stats.recentSubmissions.map((sub: any) => (
+                                            <div key={sub._id} className="p-6 border-b border-white/5 last:border-0 flex justify-between items-center group hover:bg-white/5 transition-all">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center text-blue-400 border border-blue-500/20 group-hover:scale-110 transition-all">
+                                                        <ClipboardList size={20} />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-base font-bold text-white group-hover:text-primary transition-colors tracking-tight">{sub.taskId?.title || 'Unknown Quest'}</p>
+                                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">by {sub.studentId?.fullName || 'Unknown'}</p>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <p className="text-base font-bold text-white group-hover:text-primary transition-colors tracking-tight">{act.taskId?.title || 'Unknown Quest'}</p>
-                                                    <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{new Date(act.updatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</p>
-                                                </div>
+                                                <span className="text-[9px] font-black uppercase tracking-widest bg-amber-500/10 text-amber-400 px-3 py-1.5 rounded-xl border border-amber-500/20">Pending</span>
                                             </div>
-                                            <div className="flex flex-col items-end">
-                                                <span className="text-lg font-black text-primary tracking-tighter">+{act.pointsAwarded || 0}</span>
-                                                <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Points</span>
-                                            </div>
-                                        </div>
-                                    ))
+                                        ))
+                                    ) : (
+                                        <div className="p-20 text-center text-slate-800 text-[10px] font-black uppercase tracking-[0.6em]">No pending submissions</div>
+                                    )
                                 ) : (
-                                    <div className="p-20 text-center text-slate-800 text-[10px] font-black uppercase tracking-[0.6em] italic">
-                                        No entries found
-                                    </div>
+                                    stats?.recentActivity && stats.recentActivity.length > 0 ? (
+                                        stats.recentActivity.map((act: any) => (
+                                            <div key={act._id} className="p-6 border-b border-white/5 last:border-0 flex justify-between items-center group hover:bg-white/5 transition-all">
+                                                <div className="flex items-center gap-5">
+                                                    <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary border border-primary/20 group-hover:scale-110 group-hover:rotate-12 transition-all">
+                                                        <Leaf size={22} className="fill-current" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-base font-bold text-white group-hover:text-primary transition-colors tracking-tight">{act.taskId?.title || 'Unknown Quest'}</p>
+                                                        <p className="text-[10px] text-slate-500 font-black uppercase tracking-widest mt-1">{new Date(act.updatedAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short' })}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex flex-col items-end">
+                                                    <span className="text-lg font-black text-primary tracking-tighter">+{act.pointsAwarded || 0}</span>
+                                                    <span className="text-[8px] font-black text-slate-700 uppercase tracking-widest">Points</span>
+                                                </div>
+                                            </div>
+                                        ))
+                                    ) : (
+                                        <div className="p-20 text-center text-slate-800 text-[10px] font-black uppercase tracking-[0.6em] italic">No entries found</div>
+                                    )
                                 )}
                             </CardContent>
                         </Card>
@@ -220,6 +352,94 @@ export default function Profile() {
                 </div>
             </main>
             <Footer />
+
+            {/* Edit Profile Modal */}
+            {showEditModal && (
+                <div className="fixed inset-0 bg-[#020617]/95 backdrop-blur-md z-50 flex items-center justify-center p-6">
+                    <div className="w-full max-w-md bg-[#0F172A] border border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden">
+                        <div className="flex items-center justify-between p-8 pb-4 border-b border-white/5">
+                            <div>
+                                <h2 className="text-xl font-black text-white tracking-tight">Edit Profile</h2>
+                                <p className="text-slate-500 text-xs font-medium mt-1">Update your account information</p>
+                            </div>
+                            <button onClick={() => setShowEditModal(false)} className="p-2 rounded-xl hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleSave} className="p-8 space-y-5">
+                            {saveError && (
+                                <div className="bg-red-500/10 text-red-400 p-4 rounded-xl text-sm border border-red-500/10 font-bold">
+                                    {saveError}
+                                </div>
+                            )}
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Full Name</label>
+                                <input
+                                    type="text"
+                                    value={editName}
+                                    onChange={e => setEditName(e.target.value)}
+                                    required
+                                    className="w-full px-5 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium"
+                                />
+                            </div>
+
+                            {user?.role === 'student' && (
+                                <>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Roll Number</label>
+                                            <input
+                                                type="text"
+                                                value={editRoll}
+                                                onChange={e => setEditRoll(e.target.value)}
+                                                className="w-full px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium text-sm"
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Section</label>
+                                            <input
+                                                type="text"
+                                                value={editSection}
+                                                onChange={e => setEditSection(e.target.value)}
+                                                className="w-full px-4 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium text-sm"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 ml-1">Class / Year</label>
+                                        <input
+                                            type="text"
+                                            value={editClass}
+                                            onChange={e => setEditClass(e.target.value)}
+                                            className="w-full px-5 py-3.5 rounded-xl border border-white/5 focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/50 transition-all bg-[#010413] text-white placeholder:text-slate-600 font-medium"
+                                        />
+                                    </div>
+                                </>
+                            )}
+
+                            <div className="pt-2 flex gap-3">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={() => setShowEditModal(false)}
+                                    className="flex-1 h-12 rounded-xl border-white/5 hover:bg-white/5 text-slate-400 font-black uppercase tracking-widest text-xs"
+                                >
+                                    Cancel
+                                </Button>
+                                <Button
+                                    type="submit"
+                                    disabled={saving}
+                                    className="flex-1 h-12 rounded-xl bg-primary hover:bg-emerald-600 border-0 shadow-xl shadow-primary/20 text-white font-black uppercase tracking-widest text-xs"
+                                >
+                                    <Save size={14} className="mr-2" />
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </Button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
