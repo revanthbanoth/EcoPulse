@@ -57,6 +57,17 @@ app.get('/health', (req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date() });
 });
 
+// ─── Serve React Frontend (Production) ───────────────────────────────────────
+const frontendBuildPath = path.join(__dirname, '../frontend/dist');
+app.use(express.static(frontendBuildPath));
+
+// Catch-all: for any route that is NOT an API route, return index.html
+// This lets React Router handle client-side navigation (fixes 404 on refresh)
+app.get('*', (req, res) => {
+    res.sendFile(path.join(frontendBuildPath, 'index.html'));
+});
+// ─────────────────────────────────────────────────────────────────────────────
+
 // DB Connection
 mongoose.connect(process.env.MONGODB_URI)
     .then(() => console.log('🌿 Connected to MongoDB'))

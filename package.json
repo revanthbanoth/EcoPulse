@@ -5,6 +5,7 @@
     "main": "index.js",
     "scripts": {
         "start": "node backend/server.js",
+        "build": "cd frontend && npm install && npm run build",
         "backend": "cd backend && npm run dev",
         "frontend": "cd frontend && npm run dev",
         "dev": "npx concurrently \"npm run backend\" \"npm run frontend\""
